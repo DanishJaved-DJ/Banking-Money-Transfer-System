@@ -21,3 +21,16 @@ export const createAccount = async (accountNumber, holderName, initialBalance) =
 
     return result.rows[0];
 };
+
+
+export const getAccountById = async (accountId) => {
+    const query = `
+        SELECT id, account_number, holder_name, balance
+        FROM accounts
+        WHERE id = $1;
+    `;
+
+    const result = await pool.query(query, [accountId]);
+
+    return result.rows[0];
+};

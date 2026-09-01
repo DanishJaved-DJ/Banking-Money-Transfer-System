@@ -1,5 +1,6 @@
 import express from "express";
 import accountRoutes from "./routes/accountRoutes.js";
+import transactionRoutes from "./routes/ransactionRoutes.js";
 
 import dotenv from "dotenv";
 dotenv.config();
@@ -14,6 +15,7 @@ app.get("/ping", (req, res) => {
 });
 
 app.use("/api/accounts", accountRoutes);
+app.use("/api/accounts", transactionRoutes);
 
 export default app;
 

@@ -1,4 +1,4 @@
-import { createAccount } from "../repositories/accountRepository.js";
+import { createAccount , getAccountById } from "../repositories/accountRepository.js";
 
 export const createNewAccount = async (holderName, initialBalance) => {
 
@@ -18,4 +18,18 @@ export const createNewAccount = async (holderName, initialBalance) => {
         holderName.trim(),
         initialBalance
     );
+};
+
+export const getAccountBalance = async (accountId) => {
+    const account = await getAccountById(accountId);
+
+    if (!account) {
+        throw new Error("Account not found");
+    }
+
+    return {
+        accountId: account.id,
+        accountNumber: account.account_number,
+        balance: Number(account.balance)
+    };
 };
