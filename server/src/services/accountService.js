@@ -1,4 +1,4 @@
-import { createAccount , getAccountById } from "../repositories/accountRepository.js";
+import { createAccount , getAccountById , getAllAccounts} from "../repositories/accountRepository.js";
 
 export const createNewAccount = async (holderName, initialBalance) => {
 
@@ -32,4 +32,8 @@ export const getAccountBalance = async (accountId) => {
         accountNumber: account.account_number,
         balance: Number(account.balance)
     };
+};
+
+export const getAccounts = async () => {
+    return await getAllAccounts();
 };

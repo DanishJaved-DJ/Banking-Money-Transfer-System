@@ -34,3 +34,20 @@ export const getAccountById = async (accountId) => {
 
     return result.rows[0];
 };
+
+
+export const getAllAccounts = async () => {
+    const query = `
+        SELECT
+            id,
+            account_number,
+            holder_name,
+            balance
+        FROM accounts
+        ORDER BY created_at DESC;
+    `;
+
+    const result = await pool.query(query);
+
+    return result.rows;
+};

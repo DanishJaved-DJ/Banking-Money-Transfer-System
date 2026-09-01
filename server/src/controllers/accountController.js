@@ -1,4 +1,4 @@
-import { createNewAccount , getAccountBalance } from "../services/accountService.js";
+import { createNewAccount , getAccountBalance , getAccounts } from "../services/accountService.js";
 
 export const createAccount = async (req, res) => {
     try {
@@ -33,6 +33,20 @@ export const getBalance = async (req, res) => {
 
         res.status(200).json(account);
 
+    } catch (error) {
+        res.status(400).json({
+            message: error.message
+        });
+    }
+};
+
+export const getAllAccounts = async (req, res) => {
+    try {
+        const accounts = await getAccounts();
+
+        res.status(200).json({
+            accounts
+        });
     } catch (error) {
         res.status(400).json({
             message: error.message
