@@ -27,8 +27,14 @@ export const getBalance = async (accountId) => {
   return handleResponse(response);
 };
 
-export const getTransactions = async (accountId) => {
-  const response = await fetch(`${API_URL}/accounts/${accountId}/transactions`);
+export const getTransactions = async (accountId, page = 1, limit = 10) => {
+  const query = new URLSearchParams({
+    page: String(page),
+    limit: String(limit),
+  });
+  const response = await fetch(
+    `${API_URL}/accounts/${accountId}/transactions?${query.toString()}`,
+  );
   return handleResponse(response);
 };
 
@@ -45,7 +51,6 @@ export const transferMoney = async (data) => {
 };
 
 export const getAccounts = async () => {
-    const response = await fetch(`${API_URL}/accounts`);
-
-    return response.json();
+  const response = await fetch(`${API_URL}/accounts`);
+  return handleResponse(response);
 };

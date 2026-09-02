@@ -1,55 +1,57 @@
-import { createNewAccount , getAccountBalance , getAccounts } from "../services/accountService.js";
+import {
+  createNewAccount,
+  getAccountBalance,
+  getAccounts,
+} from "../services/accountService.js";
+import { ApiResponse } from "../utils/ApiResponse.js";
 
-export const createAccount = async (req, res) => {
-    try {
+export const createAccount = async (req, res, next) => {
+  try {
+    const { holderName, initialBalance } = req.body;
 
-        const { holderName, initialBalance } = req.body;
+    const account = await createNewAccount(holderName, initialBalance);
 
-        const account = await createNewAccount(
-            holderName,
-            initialBalance
-        );
+    const response = new ApiResponse(201, "Account created successfully", {
+      accountId: account.id,
+      accountNumber: account.account_number,
+      holderName: account.holder_name,
+      balance: Number(account.balance),
+    });
 
-        res.status(201).json({
-            accountId: account.id,
-            accountNumber: account.account_number,
-            holderName: account.holder_name,
-            balance: Number(account.balance)
-        });
-
-    } catch (error) {
-
-        res.status(400).json({
-            message: error.message
-        });
-    }
+    res.status(201).json(response);
+  } catch (error) {
+    next(error);
+  }
 };
 
-export const getBalance = async (req, res) => {
-    try {
-        const { accountId } = req.params;
+export const getBalance = async (req, res, next) => {
+  try {
+    const { accountId } = req.params;
 
-        const account = await getAccountBalance(accountId);
+    const account = await getAccountBalance(accountId);
 
-        res.status(200).json(account);
+    const response = new ApiResponse(
+      200,
+      "Account balance retrieved successfully",
+      account,
+    );
 
-    } catch (error) {
-        res.status(400).json({
-            message: error.message
-        });
-    }
+    res.status(200).json(response);
+  } catch (error) {
+    next(error);
+  }
 };
 
-export const getAllAccounts = async (req, res) => {
-    try {
-        const accounts = await getAccounts();
+export const getAllAccounts = async (req, res, next) => {
+  try {
+    const accounts = await getAccounts();
 
-        res.status(200).json({
-            accounts
-        });
-    } catch (error) {
-        res.status(400).json({
-            message: error.message
-        });
-    }
+    const response = new ApiResponse(200, "Accounts retrieved successfully", {
+      accounts,
+    });
+
+    res.status(200).json(response);
+  } catch (error) {
+    next(error);
+  }
 };

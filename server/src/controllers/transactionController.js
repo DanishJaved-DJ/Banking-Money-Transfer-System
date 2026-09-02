@@ -1,19 +1,21 @@
 import { getAccountTransactions } from "../services/transactionService.js";
+import { ApiResponse } from "../utils/ApiResponse.js";
 
-export const getTransactions = async (req, res) => {
-    try {
-        const { accountId } = req.params;
+export const getTransactions = async (req, res, next) => {
+  try {
+    const { accountId } = req.params;
+    const { page = 1, limit = 10 } = req.query;
 
-        const transactions = await getAccountTransactions(accountId);
+    const result = await getAccountTransactions(
+      Number(accountId),
+      Number(page),
+      Number(limit),
+    );
 
-        res.status(200).json({
-            accountId: Number(accountId),
-            transactions
-        });
-
-    } catch (error) {
-        res.status(400).json({
-            message: error.message
-        });
-    }
+    res
+      .status(200)
+      .json(new ApiResponse(200, "Transactions fetched successfully", result));
+  } catch (error) {
+    next(error);
+  }
 };

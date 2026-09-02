@@ -1,85 +1,88 @@
 import pool from "../db/pool.js";
+import { AppError } from "../utils/AppError.js";
 
 export const transferMoney = async (
-    fromAccountId,
-    toAccountId,
-    amount,
-    transactionRef
+  fromAccountId,
+  toAccountId,
+  amount,
+  transactionRef,
 ) => {
-    const client = await pool.connect();
+  const client = await pool.connect();
 
-    try {
-        await client.query("BEGIN");
+  try {
+    await client.query("BEGIN");
 
-        // Always lock accounts in the same order.
-        // This helps prevent deadlocks when concurrent transfers
-        // happen in opposite directions.
-        const firstId = Math.min(fromAccountId, toAccountId);
-        const secondId = Math.max(fromAccountId, toAccountId);
+    const normalizedFromId = Number(fromAccountId);
+    const normalizedToId = Number(toAccountId);
 
-        const accountResult = await client.query(
-            `
+    const firstId = Math.min(normalizedFromId, normalizedToId);
+    const secondId = Math.max(normalizedFromId, normalizedToId);
+
+    const accountResult = await client.query(
+      `
             SELECT id, balance
             FROM accounts
             WHERE id IN ($1, $2)
             ORDER BY id
             FOR UPDATE;
             `,
-            [firstId, secondId]
-        );
+      [firstId, secondId],
+    );
 
-        // Both accounts must exist
-        if (accountResult.rows.length !== 2) {
-            throw new Error("One or both accounts not found");
-        }
+    if (accountResult.rows.length !== 2) {
+      const foundIds = accountResult.rows.map((account) => Number(account.id));
+      const missingIds = [normalizedFromId, normalizedToId].filter(
+        (id) => !foundIds.includes(id),
+      );
 
-        // Find sender and receiver explicitly
-        const sender = accountResult.rows.find(
-            (account) =>
-                Number(account.id) === Number(fromAccountId)
-        );
+      throw new AppError(
+        missingIds.length
+          ? `Account not found: ${missingIds.join(", ")}`
+          : "One or both accounts not found",
+        404,
+      );
+    }
 
-        const receiver = accountResult.rows.find(
-            (account) =>
-                Number(account.id) === Number(toAccountId)
-        );
+    const sender = accountResult.rows.find(
+      (account) => Number(account.id) === normalizedFromId,
+    );
 
-        if (!sender || !receiver) {
-            throw new Error("One or both accounts not found");
-        }
+    const receiver = accountResult.rows.find(
+      (account) => Number(account.id) === normalizedToId,
+    );
 
-        // Check sender balance
-        if (Number(sender.balance) < Number(amount)) {
-            throw new Error("Insufficient balance");
-        }
+    if (!sender || !receiver) {
+      throw new AppError("One or both accounts not found", 404);
+    }
 
-        // Debit sender
-        await client.query(
-            `
+    if (Number(sender.balance) < Number(amount)) {
+      throw new AppError("Insufficient balance", 400);
+    }
+
+    await client.query(
+      `
             UPDATE accounts
             SET
                 balance = balance - $1,
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = $2;
             `,
-            [amount, fromAccountId]
-        );
+      [amount, fromAccountId],
+    );
 
-        // Credit receiver
-        await client.query(
-            `
+    await client.query(
+      `
             UPDATE accounts
             SET
                 balance = balance + $1,
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = $2;
             `,
-            [amount, toAccountId]
-        );
+      [amount, toAccountId],
+    );
 
-        // Create transaction record
-        const transactionResult = await client.query(
-            `
+    const transactionResult = await client.query(
+      `
             INSERT INTO transactions (
                 transaction_ref,
                 from_account_id,
@@ -97,30 +100,16 @@ export const transferMoney = async (
                 status,
                 created_at;
             `,
-            [
-                transactionRef,
-                fromAccountId,
-                toAccountId,
-                amount,
-                "SUCCESS"
-            ]
-        );
+      [transactionRef, fromAccountId, toAccountId, amount, "SUCCESS"],
+    );
 
-        // Everything succeeded
-        await client.query("COMMIT");
+    await client.query("COMMIT");
 
-        return transactionResult.rows[0];
-
-    } catch (error) {
-
-        // Something failed → undo everything
-        await client.query("ROLLBACK");
-
-        throw error;
-
-    } finally {
-
-        // Return connection to pool
-        client.release();
-    }
+    return transactionResult.rows[0];
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
 };

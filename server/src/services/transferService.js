@@ -1,34 +1,38 @@
 import { transferMoney } from "../repositories/transferRepository.js";
+import { AppError } from "../utils/AppError.js";
 
-export const createTransfer = async (
-    fromAccountId,
-    toAccountId,
-    amount
-) => {
+export const createTransfer = async (fromAccountId, toAccountId, amount) => {
+  if (!fromAccountId || !toAccountId) {
+    throw new AppError("Both accounts are required", 400);
+  }
 
-    if (!fromAccountId || !toAccountId) {
-        throw new Error("Both accounts are required");
-    }
+  const normalizedFromId = Number(fromAccountId);
+  const normalizedToId = Number(toAccountId);
 
-    if (fromAccountId === toAccountId) {
-        throw new Error(
-            "Cannot transfer money to the same account"
-        );
-    }
+  if (!Number.isInteger(normalizedFromId) || normalizedFromId <= 0) {
+    throw new AppError("Sender account ID is invalid", 400);
+  }
 
-    if (!Number.isFinite(amount) || amount <= 0) {
-        throw new Error(
-            "Transfer amount must be greater than zero"
-        );
-    }
+  if (!Number.isInteger(normalizedToId) || normalizedToId <= 0) {
+    throw new AppError("Receiver account ID is invalid", 400);
+  }
 
-    const transactionRef =
-        `TXN-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+  if (normalizedFromId === normalizedToId) {
+    throw new AppError("Cannot transfer money to the same account", 400);
+  }
 
-    return await transferMoney(
-        fromAccountId,
-        toAccountId,
-        amount,
-        transactionRef
-    );
+  const numericAmount = Number(amount);
+
+  if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+    throw new AppError("Transfer amount must be greater than zero", 400);
+  }
+
+  const transactionRef = `TXN-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+
+  return await transferMoney(
+    normalizedFromId,
+    normalizedToId,
+    numericAmount,
+    transactionRef,
+  );
 };

@@ -1,39 +1,40 @@
-import { createAccount , getAccountById , getAllAccounts} from "../repositories/accountRepository.js";
+import {
+  createAccount,
+  getAccountById,
+  getAllAccounts,
+} from "../repositories/accountRepository.js";
+import { AppError } from "../utils/AppError.js";
 
 export const createNewAccount = async (holderName, initialBalance) => {
+  if (!holderName || holderName.trim().length === 0) {
+    throw new AppError("Holder name is required", 400);
+  }
 
-    if (!holderName || holderName.trim().length === 0) {
-        throw new Error("Holder name is required");
-    }
+  const parsedBalance = Number(initialBalance);
 
-    if (initialBalance < 0) {
-        throw new Error("Initial balance cannot be negative");
-    }
+  if (!Number.isFinite(parsedBalance) || parsedBalance < 0) {
+    throw new AppError("Initial balance cannot be negative", 400);
+  }
 
-    const accountNumber =
-        "ACC" + Date.now();
+  const accountNumber = "ACC" + Date.now();
 
-    return await createAccount(
-        accountNumber,
-        holderName.trim(),
-        initialBalance
-    );
+  return await createAccount(accountNumber, holderName.trim(), parsedBalance);
 };
 
 export const getAccountBalance = async (accountId) => {
-    const account = await getAccountById(accountId);
+  const account = await getAccountById(accountId);
 
-    if (!account) {
-        throw new Error("Account not found");
-    }
+  if (!account) {
+    throw new AppError("Account not found", 404);
+  }
 
-    return {
-        accountId: account.id,
-        accountNumber: account.account_number,
-        balance: Number(account.balance)
-    };
+  return {
+    accountId: account.id,
+    accountNumber: account.account_number,
+    balance: Number(account.balance),
+  };
 };
 
 export const getAccounts = async () => {
-    return await getAllAccounts();
+  return await getAllAccounts();
 };
