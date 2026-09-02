@@ -6,19 +6,23 @@ const Dashboard = ({ accountId, onBack }) => {
   const [transactions, setTransactions] = useState([]);
   const [pagination, setPagination] = useState({
     page: 1,
-    limit: 10,
+    limit: 5,
     total: 0,
     totalPages: 1,
   });
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(5);
 
   const [toAccountId, setToAccountId] = useState("");
   const [amount, setAmount] = useState("");
 
   const [loading, setLoading] = useState(false);
+  const [pageLoading, setPageLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const [messageType, setMessageType] = useState("success");
 
   const loadAccountData = async (page = 1, limit = pageSize) => {
+    setPageLoading(true);
+
     try {
       const balanceResponse = await getBalance(accountId);
       const transactionResponse = await getTransactions(accountId, page, limit);
@@ -35,6 +39,8 @@ const Dashboard = ({ accountId, onBack }) => {
       );
     } catch (error) {
       console.error(error);
+    } finally {
+      setPageLoading(false);
     }
   };
 
@@ -47,6 +53,7 @@ const Dashboard = ({ accountId, onBack }) => {
 
     setLoading(true);
     setMessage("");
+    setMessageType("success");
 
     try {
       const response = await transferMoney({
@@ -56,163 +63,175 @@ const Dashboard = ({ accountId, onBack }) => {
       });
 
       setMessage(response?.message || "Transfer successful");
-
       setToAccountId("");
       setAmount("");
-
       await loadAccountData(1, pageSize);
     } catch (error) {
       console.error(error);
       setMessage(error?.message || "Transfer failed");
+      setMessageType("error");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 p-8">
-      <div className="mx-auto max-w-5xl">
-        {/* Back Button */}
-        <button
-          onClick={onBack}
-          className="mb-6 rounded-lg border bg-white px-4 py-2 text-sm hover:bg-gray-50"
-        >
+    <div className="banking-shell">
+      <div className="container-shell dashboard-shell">
+        <button type="button" onClick={onBack} className="back-button">
           ← Back to Accounts
         </button>
 
-        <h1 className="mb-8 text-3xl font-bold">Account Dashboard</h1>
-
-        {/* Account Details */}
-        {account && (
-          <div className="mb-8 rounded-xl bg-white p-6 shadow">
-            <p className="text-sm text-gray-500">Account Number</p>
-
-            <p className="text-xl font-semibold">{account.accountNumber}</p>
-
-            <p className="mt-4 text-sm text-gray-500">Current Balance</p>
-
-            <p className="text-3xl font-bold">
-              ₹{Number(account.balance).toFixed(2)}
-            </p>
+        <header className="page-header dashboard-header">
+          <div>
+            <p className="eyebrow">Account overview</p>
+            <h1>Account Dashboard</h1>
           </div>
+        </header>
+
+        {account && (
+          <section className="glass-card summary-card">
+            <div>
+              <p className="field-label">Account Number</p>
+              <p className="account-number large">{account.accountNumber}</p>
+            </div>
+
+            <div className="balance-block">
+              <p className="field-label">Current Balance</p>
+              <p className="balance-value">
+                ₹{Number(account.balance).toFixed(2)}
+              </p>
+            </div>
+          </section>
         )}
 
-        {/* Transfer Money */}
-        <div className="mb-8 rounded-xl bg-white p-6 shadow">
-          <h2 className="mb-4 text-xl font-semibold">Transfer Money</h2>
+        <div className="dashboard-grid">
+          <section className="glass-card transfer-panel">
+            <div className="section-header">
+              <h2>Transfer Money</h2>
+            </div>
 
-          <form onSubmit={handleTransfer} className="space-y-4">
-            <div>
-              <label className="mb-1 block text-sm font-medium">
-                To Account
+            <form onSubmit={handleTransfer} className="transfer-form">
+              <label>
+                <span>To Account</span>
+                <input
+                  type="number"
+                  value={toAccountId}
+                  onChange={(e) => setToAccountId(e.target.value)}
+                  className="form-field"
+                  placeholder="Enter account ID"
+                  required
+                />
               </label>
 
-              <input
-                type="number"
-                value={toAccountId}
-                onChange={(e) => setToAccountId(e.target.value)}
-                className="w-full rounded-lg border p-3 outline-none focus:ring-2 focus:ring-black"
-                placeholder="Enter account ID"
-                required
-              />
-            </div>
+              <label>
+                <span>Amount</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  className="form-field"
+                  placeholder="Enter amount"
+                  required
+                />
+              </label>
 
-            <div>
-              <label className="mb-1 block text-sm font-medium">Amount</label>
-
-              <input
-                type="number"
-                step="0.01"
-                min="0.01"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                className="w-full rounded-lg border p-3 outline-none focus:ring-2 focus:ring-black"
-                placeholder="Enter amount"
-                required
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="rounded-lg bg-black px-5 py-3 text-white hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {loading ? "Processing..." : "Transfer"}
-            </button>
-          </form>
-
-          {message && <p className="mt-4 text-sm font-medium">{message}</p>}
-        </div>
-
-        {/* Transaction History */}
-        <div className="rounded-xl bg-white p-6 shadow">
-          <h2 className="mb-4 text-xl font-semibold">Transaction History</h2>
-
-          {transactions.length === 0 ? (
-            <p className="text-gray-500">No transactions yet.</p>
-          ) : (
-            <div className="space-y-3">
-              {transactions.map((transaction) => {
-                const isDebit =
-                  Number(transaction.from_account_id) === Number(accountId);
-
-                return (
-                  <div
-                    key={transaction.id}
-                    className="flex items-center justify-between border-b pb-3"
-                  >
-                    <div>
-                      <p className="font-medium">
-                        {isDebit ? "DEBIT" : "CREDIT"}
-                      </p>
-
-                      <p className="text-sm text-gray-500">
-                        Transaction: {transaction.transaction_ref}
-                      </p>
-                    </div>
-
-                    <div className="text-right">
-                      <p className="font-semibold">
-                        ₹{Number(transaction.amount).toFixed(2)}
-                      </p>
-
-                      <p className="text-sm text-gray-500">
-                        {transaction.status}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          <div className="mt-6 flex items-center justify-between gap-3">
-            <label className="flex items-center gap-2 text-sm text-gray-600">
-              <span>Rows per page</span>
-              <select
-                value={pageSize}
-                onChange={(e) => setPageSize(Number(e.target.value))}
-                className="rounded border px-2 py-1"
+              <button
+                type="submit"
+                className="primary-button"
+                disabled={loading}
               >
-                <option value={5}>5</option>
-                <option value={10}>10</option>
-                <option value={20}>20</option>
-                <option value={50}>50</option>
-              </select>
-            </label>
+                {loading ? "Processing..." : "Transfer"}
+              </button>
+            </form>
+
+            {message && (
+              <p
+                className={`feedback-message ${messageType === "error" ? "error" : "success"}`}
+              >
+                {message}
+              </p>
+            )}
+          </section>
+
+          <section className="glass-card transactions-panel">
+            <div className="section-header split-header">
+              <h2>Transaction History</h2>
+
+              <label className="page-size-select">
+                <span>Rows</span>
+                <select
+                  value={pageSize}
+                  onChange={(e) => setPageSize(Number(e.target.value))}
+                >
+                  <option value={5}>5</option>
+                  <option value={10}>10</option>
+                  <option value={20}>20</option>
+                  <option value={50}>50</option>
+                </select>
+              </label>
+            </div>
+
+            {pageLoading ? (
+              <div className="transaction-list">
+                {Array.from({ length: 4 }).map((_, index) => (
+                  <div key={index} className="transaction-row skeleton-row">
+                    <div className="skeleton-line medium" />
+                    <div className="skeleton-line small" />
+                    <div className="skeleton-line short" />
+                  </div>
+                ))}
+              </div>
+            ) : transactions.length === 0 ? (
+              <div className="empty-state compact">
+                <h3>No transactions yet</h3>
+                <p>Recent account activity will appear here.</p>
+              </div>
+            ) : (
+              <div className="transaction-list">
+                {transactions.map((transaction) => {
+                  const isDebit =
+                    Number(transaction.from_account_id) === Number(accountId);
+
+                  return (
+                    <div key={transaction.id} className="transaction-row">
+                      <div>
+                        <p
+                          className={`transaction-type ${isDebit ? "debit" : "credit"}`}
+                        >
+                          {isDebit ? "DEBIT" : "CREDIT"}
+                        </p>
+                        <p className="transaction-ref">
+                          Ref: {transaction.transaction_ref}
+                        </p>
+                      </div>
+
+                      <div className="transaction-amount-block">
+                        <p className="amount">
+                          ₹{Number(transaction.amount).toFixed(2)}
+                        </p>
+                        <p className="status-text">{transaction.status}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
 
             {pagination.totalPages > 1 && (
-              <div className="flex items-center gap-3">
+              <div className="pagination-row">
                 <button
                   type="button"
                   disabled={pagination.page <= 1}
                   onClick={() => loadAccountData(pagination.page - 1, pageSize)}
-                  className="rounded-lg border px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                  className="secondary-button compact"
                 >
                   Previous
                 </button>
 
-                <p className="text-sm text-gray-600">
+                <p>
                   Page {pagination.page} of {pagination.totalPages}
                 </p>
 
@@ -220,13 +239,13 @@ const Dashboard = ({ accountId, onBack }) => {
                   type="button"
                   disabled={pagination.page >= pagination.totalPages}
                   onClick={() => loadAccountData(pagination.page + 1, pageSize)}
-                  className="rounded-lg border px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                  className="secondary-button compact"
                 >
                   Next
                 </button>
               </div>
             )}
-          </div>
+          </section>
         </div>
       </div>
     </div>
