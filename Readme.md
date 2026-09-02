@@ -57,8 +57,8 @@ banking-money-transfer-system/
 │   ├── vite.config.js
 │   ├── tailwind.config.js
 │   └── .env
-├── docs/
-│   └── system-design.png
+├
+│   └── design.png
 ├── package.json
 ├── README.md
 └── .gitignore
@@ -233,9 +233,9 @@ If any step fails, the transaction is rolled back automatically. This ensures th
 
 ## Future Improvements
 
-- Centralized error handling
+- Centralized error handling -> DONE
 - Authentication and authorization
-- Transaction pagination
+- Transaction pagination -> Done
 - Automated tests
 - Production deployment setup
 
